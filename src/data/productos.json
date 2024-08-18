@@ -1,0 +1,4 @@
+[
+  { "id": "101", "title": "Producto 1", "description": "Descripcion", "code": "P001", "precio": 100000, "status": true, "stock": 10, "categoria": "Categoria 1", "thumbnails": ["url1", "url2"] },
+  { "id": "102", "title": "Producto 2", "description": "Descripcion", "code": "P002", "precio": 15000, "status": true, "stock": 5, "categoria": "Categoria 2", "thumbnails": ["url3", "url4"] }
+]
