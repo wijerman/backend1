@@ -1,59 +1,99 @@
 const express = require('express');
 const fs = require('fs');
-const path = require('path');
 const router = express.Router();
+const path = './src/data/productos.json';
 
-const productsFilePath = path.join(__dirname, '../data/productos.json');
-
-// Helper function to read products data from JSON file
-const readProductsFile = () => {
-    const data = fs.readFileSync(productsFilePath, 'utf8');
-    return JSON.parse(data);
-};
-
-// Ruta GET /api/products/
+// Obtener todos los productos
 router.get('/', (req, res) => {
-    const products = readProductsFile();
-    let result = products;
-
-    if (req.query.limit) {
-        result = products.slice(0, req.query.limit);
+  fs.readFile(path, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).send('Error al leer los productos');
     }
-
-    res.json(result);
+    let products = JSON.parse(data);
+    const limit = req.query.limit;
+    if (limit) {
+      products = products.slice(0, limit);
+    }
+    res.json(products);
+  });
 });
 
-// Ruta GET /api/products/:pid
+// Obtener un producto por ID
 router.get('/:pid', (req, res) => {
-    const products = readProductsFile();
-    const product = products.find(p => p.id === req.params.pid);
-
-    if (product) {
-        res.json(product);
-    } else {
-        res.status(404).send('Producto no encontrado');
+  const pid = req.params.pid;
+  fs.readFile(path, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).send('Error al leer los productos');
     }
+    const products = JSON.parse(data);
+    const product = products.find(p => p.id === pid);
+    if (!product) {
+      return res.status(404).send('Producto no encontrado');
+    }
+    res.json(product);
+  });
 });
 
-// Ruta POST /api/products/
+// Agregar un nuevo producto
 router.post('/', (req, res) => {
-    const products = readProductsFile();
-    const newProduct = {
-        id: `${Date.now()}`,
-        title: req.body.title,
-        description: req.body.description,
-        code: req.body.code,
-        price: req.body.price,
-        status: req.body.status || true,
-        stock: req.body.stock,
-        category: req.body.category,
-        thumbnails: req.body.thumbnails || [],
-    };
-
+  const newProduct = req.body;
+  fs.readFile(path, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).send('Error al leer los productos');
+    }
+    const products = JSON.parse(data);
+    newProduct.id = String(products.length + 1); // Asignar un nuevo ID
     products.push(newProduct);
+    fs.writeFile(path, JSON.stringify(products, null, 2), (err) => {
+      if (err) {
+        return res.status(500).send('Error al guardar el producto');
+      }
+      res.status(201).send('Producto agregado');
+    });
+  });
+});
 
-    fs.writeFileSync(productsFilePath, JSON.stringify(products, null, 2));
-    res.status(201).json(newProduct);
+// Actualizar un producto por ID
+router.put('/:pid', (req, res) => {
+  const pid = req.params.pid;
+  const updatedProduct = req.body;
+  fs.readFile(path, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).send('Error al leer los productos');
+    }
+    const products = JSON.parse(data);
+    const index = products.findIndex(p => p.id === pid);
+    if (index === -1) {
+      return res.status(404).send('Producto no encontrado');
+    }
+    const product = products[index];
+    const updated = { ...product, ...updatedProduct, id: product.id }; // Asegurar que el ID no se actualice
+    products[index] = updated;
+    fs.writeFile(path, JSON.stringify(products, null, 2), (err) => {
+      if (err) {
+        return res.status(500).send('Error al actualizar el producto');
+      }
+      res.send('Producto actualizado');
+    });
+  });
+});
+
+// Eliminar un producto por ID
+router.delete('/:pid', (req, res) => {
+  const pid = req.params.pid;
+  fs.readFile(path, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).send('Error al leer los productos');
+    }
+    let products = JSON.parse(data);
+    products = products.filter(p => p.id !== pid);
+    fs.writeFile(path, JSON.stringify(products, null, 2), (err) => {
+      if (err) {
+        return res.status(500).send('Error al eliminar el producto');
+      }
+      res.send('Producto eliminado');
+    });
+  });
 });
 
 module.exports = router;

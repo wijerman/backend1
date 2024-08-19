@@ -1,12 +1,15 @@
 const express = require('express');
+const app = express();
 const productsRouter = require('./routes/products');
 const cartsRouter = require('./routes/carts');
 
-const app = express();
+app.use(express.json()); // Para poder manejar JSON en el body de las requests
 
-app.use(express.json()); 
 // Rutas
 app.use('/api/products', productsRouter);
 app.use('/api/carts', cartsRouter);
 
-module.exports = app;
+// Servidor escuchando en el puerto 8080
+app.listen(8080, () => {
+  console.log('Servidor escuchando en el puerto 8080');
+});

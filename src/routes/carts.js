@@ -1,50 +1,73 @@
 const express = require('express');
 const fs = require('fs');
-const path = require('path');
 const router = express.Router();
+const path = './src/data/carrito.json';
 
-const cartsFilePath = path.join(__dirname, '../data/carrito.json');
-
-// Helper function to read carts data from JSON file
-const readCartsFile = () => {
-    const data = fs.readFileSync(cartsFilePath, 'utf8');
-    return JSON.parse(data);
-};
-
-// Ruta GET /api/carts/:cid
-router.get('/:cid', (req, res) => {
-    const carts = readCartsFile();
-    const cart = carts.find(c => c.id === req.params.cid);
-
-    if (cart) {
-        res.json(cart.products);
-    } else {
-        res.status(404).send('Carrito no encontrado');
+// Crear un nuevo carrito
+router.post('/', (req, res) => {
+  fs.readFile(path, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).send('Error al leer los carritos');
     }
+    const carts = JSON.parse(data);
+    const newCart = {
+      id: String(carts.length + 1), // Asignar un nuevo ID
+      products: []
+    };
+    carts.push(newCart);
+    fs.writeFile(path, JSON.stringify(carts, null, 2), (err) => {
+      if (err) {
+        return res.status(500).send('Error al guardar el carrito');
+      }
+      res.status(201).send('Carrito creado');
+    });
+  });
 });
 
-// Ruta POST /api/carts/:cid/product/:pid
-router.post('/:cid/product/:pid', (req, res) => {
-    const carts = readCartsFile();
-    const cart = carts.find(c => c.id === req.params.cid);
-
-    if (cart) {
-        const product = cart.products.find(p => p.product === req.params.pid);
-
-        if (product) {
-            product.quantity += 1;
-        } else {
-            cart.products.push({
-                product: req.params.pid,
-                quantity: 1,
-            });
-        }
-
-        fs.writeFileSync(cartsFilePath, JSON.stringify(carts, null, 2));
-        res.status(201).json(cart);
-    } else {
-        res.status(404).send('Carrito no encontrado');
+// Obtener los productos de un carrito por ID
+router.get('/:cid', (req, res) => {
+  const cid = req.params.cid;
+  fs.readFile(path, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).send('Error al leer los carritos');
     }
+    const carts = JSON.parse(data);
+    const cart = carts.find(c => c.id === cid);
+    if (!cart) {
+      return res.status(404).send('Carrito no encontrado');
+    }
+    res.json(cart.products);
+  });
+});
+
+// Agregar un producto al carrito
+router.post('/:cid/product/:pid', (req, res) => {
+  const cid = req.params.cid;
+  const pid = req.params.pid;
+  fs.readFile(path, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).send('Error al leer los carritos');
+    }
+    const carts = JSON.parse(data);
+    const cart = carts.find(c => c.id === cid);
+    if (!cart) {
+      return res.status(404).send('Carrito no encontrado');
+    }
+
+    const existingProduct = cart.products.find(p => p.product === pid);
+    if (existingProduct) {
+      existingProduct.quantity += 1; // Incrementar la cantidad si el producto ya existe en el carrito
+    } else {
+      cart.products.push({ product: pid, quantity: 1 }); // Agregar nuevo producto
+    }
+
+    fs.writeFile(path, JSON.stringify(carts, null, 2), (err) => {
+      if (err) {
+        return res.status(500).send('Error al actualizar el carrito');
+      }
+      res.send('Producto agregado al carrito');
+    });
+  });
 });
 
 module.exports = router;
